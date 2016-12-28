@@ -5,6 +5,12 @@
     
     <entry>
       <title><![CDATA[my-first-blog]]></title>
+      <url>http://blog.leijun.me/2016/12/28/my-first-blog/</url>
+      <content type="html"></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[my-first-blog]]></title>
       <url>http://blog.leijun.me/2016/12/28/05-hexo%E4%B8%BB%E9%A2%98%E4%BC%98%E5%8C%962/</url>
       <content type="html"><![CDATA[<h1 id="hexo主题优化2"><a href="#hexo主题优化2" class="headerlink" title="hexo主题优化2"></a>hexo主题优化2</h1><blockquote>
 <p>19:57 2016/9/11  </p>
@@ -28,12 +34,6 @@
 <h3 id="友盟U-Web-CNZZ统计"><a href="#友盟U-Web-CNZZ统计" class="headerlink" title="友盟U-Web/CNZZ统计"></a>友盟U-Web/CNZZ统计</h3><p>CNZZ现在已经合并到友盟+了，原来的产品该名称叫友盟U-Web了。去友盟+注册账号，选择产品友盟U-Web，立即使用，填写一些你的博客域名信息后会得到一个siteid=1260437617（看地址栏），把这个siteid的值填写到next主题的配置文件中。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">JUN@JUN-PC  /d/GitHub/hexo/themes/next (master)</span><br><span class="line">$ vim _config.yml</span><br><span class="line">cnzz_siteid: 1260437617</span><br></pre></td></tr></table></figure></p>
 <p>测试了一下，竟然不生效，那就直接贴代码吧。登录友盟+，进入你的U-Web产品，复制你的统计代码，添加代码到hexo/themes/next/layout/_partials/<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">JUN@JUN-PC  /d/GitHub/hexo/themes/next/layout/_partials (master)</span><br><span class="line">$ vim footer.swig</span><br><span class="line">  &#123;% <span class="keyword">if</span> theme.cnzz_siteid %&#125;</span><br><span class="line">  &lt;span class=<span class="string">"site-pv"</span>&gt;</span><br><span class="line">  &lt;script <span class="built_in">type</span>=<span class="string">"text/javascript"</span>&gt;var cnzz_protocol = ((<span class="string">"https:"</span> == document.location.protocol) ? <span class="string">" https://"</span> : <span class="string">" http://"</span>);document.write(unescape(<span class="string">"%3Cspan id='cnzz_stat_icon_1260437617'%3E%3C/span%3E%3Cscript src='"</span> + cnzz_protocol + <span class="string">"s11.cnzz.com/z_stat.php%3Fid%3D1260437617%26show%3Dpic' type='text/javascript'%3E%3C/script%3E"</span>));&lt;/script&gt;</span><br><span class="line">  &lt;/span&gt;</span><br><span class="line">  &#123;% endif %&#125;</span><br></pre></td></tr></table></figure></p>
 ]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[my-first-blog]]></title>
-      <url>http://blog.leijun.me/2016/12/28/my-first-blog/</url>
-      <content type="html"></content>
     </entry>
     
     <entry>
