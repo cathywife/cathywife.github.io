@@ -103,7 +103,7 @@
 <meta property="og:image" content="http://obopl9dp8.bkt.clouddn.com/blog/20170118/210315335.png">
 <meta property="og:image" content="http://obopl9dp8.bkt.clouddn.com/blog/20170118/210346428.png">
 <meta property="og:image" content="http://obopl9dp8.bkt.clouddn.com/blog/20170118/210414083.png">
-<meta property="og:updated_time" content="2017-01-19T12:31:07.987Z">
+<meta property="og:updated_time" content="2017-01-19T13:10:43.996Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="基于自建IB存储的无盘刀片服务器虚拟化实战">
 <meta name="twitter:description" content="这是2016年3月份我在“桌面云”微信群的一次分享，后发布于“桌面云之云潮涌动”公众号，现将其作为我的第一篇博文。">
@@ -362,7 +362,8 @@
 <h3 id="IB现状"><a href="#IB现状" class="headerlink" title="IB现状"></a>IB现状</h3><p>大家都知道IT技术发展之快，所以我们这批09年的IB设备性能已经out了，不过怎么说呢，和千兆以太网比起来，20Gbps的IB总比1Gbps的以太网要好吧，哈哈。虽然实测到不了20Gbps，但也十几Gbps了，也OK的了。不过现在主流IB网络带宽都在FDR 56Gbps（还有EDR 100Gbps哦）以上了，可怜我们的设备还是最老的20Gbps（4X DDR）。</p>
 <p>在IB这块，大家可能听说过一家比较牛B的公司叫mellanox（芯片级厂商，掌握核心科技），我们的IB网络设备也用的mellanox的产品，准确来说是用到mellanox的芯片。具体的，设备中用到的HCA卡（Host Channel Adapters）、IB直通模块、IB核心/边缘交换机等是Voltaire公司产的，而Voltaire的产品用的都是mellanox的芯片，大概在2010年Voltaire被mellanox收购了。</p>
 <h2 id="自建IB存储"><a href="#自建IB存储" class="headerlink" title="自建IB存储"></a>自建IB存储</h2><p><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170118/205104204.png" alt="mark"><br>其次，来说一下自建IB存储。由于我们的IBM刀片服务器全都是无盘的，而且每台刀片都只有一个内部2.5寸盘位，所以只能使用集中存储了。了解了一下市面上的IB存储厂商，国内少的可怜，国外就属大名鼎鼎的DDN了。于是接触了DDN，谈了几轮，后来由于各种原因吧，没有合作成。看来，使用商用IB存储这条路是不通了，汇报给BOSS，然后BOSS说你自己搞定吧，也就有了本节的内容了。其实，无盘使用集中存储我们还可以考虑NFS的，NFS over RDMA技术上是可行的，不过我没有测试这种方案，所以这里就不再介绍了。</p>
-<p>可能有的童靴玩过IP SAN，那对ISCSI Target这类开源软件应该有所了解，我这里使用的是TGT，感兴趣的童靴可以测试一下。那就开工了，找了台DELL R720插上HCA卡，装满硬盘，做成RAID10，划一个几百G的系统LUN，其它全部都作为数据LUN。安装CentOS 6.5，安装OFED（HCA卡）驱动，配置IB口IP，用ib_write_bw测试一下速度。将数据LUN分区（GPT）作为LVM，为每台无盘刀片服务器创建2个LV，一个用于安装无盘刀片服务器的操作系统，一个用于存放无盘刀片服务器的数据（虚拟机镜像等），这个过程使用脚本就好了，一共创建了28个LV（针对单台刀片机箱的）。<br>准备工作做完了，主角该上场了。开始安装TGT，设置targets.conf分享所有的28个lv出去。具体地，要使用backing-store，关闭写缓存，使用initiator-address限制每台刀片服务器只能使用自己的2个LUN（在以太网口和IB口上），配置每台刀片的数据LUN使用iSER，因为BoIB不支持从iSER LUN启动，所以每台刀片的系统LUN不能使用RDMA了。</p>
+<p>可能有的童靴玩过IP SAN，那对ISCSI Target这类开源软件应该有所了解，我这里使用的是TGT，感兴趣的童靴可以测试一下。那就开工了，找了台DELL R720插上HCA卡，装满硬盘，做成RAID10，划一个几百G的系统LUN，其它全部都作为数据LUN。安装CentOS 6.5，安装OFED（HCA卡）驱动，配置IB口IP，用ib_write_bw测试一下速度。将数据LUN分区（GPT）作为LVM，为每台无盘刀片服务器创建2个LV，一个用于安装无盘刀片服务器的操作系统，一个用于存放无盘刀片服务器的数据（虚拟机镜像等），这个过程使用脚本就好了，一共创建了28个LV（针对单台刀片机箱的）。</p>
+<p>准备工作做完了，主角该上场了。开始安装TGT，设置targets.conf分享所有的28个lv出去。具体地，要使用backing-store，关闭写缓存，使用initiator-address限制每台刀片服务器只能使用自己的2个LUN（在以太网口和IB口上），配置每台刀片的数据LUN使用iSER，因为BoIB不支持从iSER LUN启动，所以每台刀片的系统LUN不能使用RDMA了。</p>
 <p>基本的IB存储已经是配置完了，后面会在配合刀片OS批量安装的时候操作一下。</p>
 <h2 id="无盘启动"><a href="#无盘启动" class="headerlink" title="无盘启动"></a>无盘启动</h2><p><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170118/210105543.png" alt="mark"><br>再者，再来说一下无盘启动。这个实际上是非常重要的一环。可能很多童靴一听到无盘就想起早些年的网吧了，哈哈。这里需要2个方面的支持，一个方面是刀片上的HCA要支持BoIB，不幸的是我们的这款HCA直通模块默认是没有启动ROM的，幸运的是mellanox为我们提供了对应的BoIB的ROM，于是就先做个刷ROM的无盘OS模板，接下来就是批量刷ROM了。第二个方面是既然是无盘大家可能也都猜到了要用到启动服务器，要不无盘刀片怎么知道从哪里可以引导系统啊。启动服务器是重点，下面就来介绍一下无盘启动服务器搭建。</p>
 <p>先来介绍几个术语：PXE/gPXE/iPXE，PXE是闭源的，后来有了开源的gPXE，而后又由于gPXE版权问题，又fork出了iPXE。提到PXE我想大家应该都不陌生哈，批量安装系统必备基础，早期都是用pxe+tftp+dhcp+kickstart的，现在可以用cobbler（其实本质都差不多）。PXE只支持tftp这种传输方式，而我们要使用的可是ISCSI SAN启动，所以这里我们可以使用gPXE or iPXE，这两个支持更多的协议，包括HTTP、ISCSI SAN、AoE和BoIB等。我们这里使用iPXE。说到这里，可能有同学会想到前面刷的ROM了，其实里面刷的是gPXE，mellanox在里面做了扩展，以使它的设备支持BoIB。iPXE有多种调用方式，本来我是使用pxelinux调用iPXE的，这在厚节点上是可行的，但是在无盘刀片服务器上不够稳定，后来就改成从dhcp直接调用iPXE了。</p>
