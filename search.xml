@@ -4,6 +4,156 @@
   
     
     <entry>
+      <title><![CDATA[KVM安装windows server 2016并启用WSUS服务]]></title>
+      <url>http://blog.leijun.me/2017/02/15/KVM%E5%AE%89%E8%A3%85windows%20server%202016%E5%B9%B6%E5%90%AF%E7%94%A8WSUS%E6%9C%8D%E5%8A%A1/</url>
+      <content type="html"><![CDATA[<blockquote>
+<p>17:12 2017/2/10 create @shuiche80</p>
+</blockquote>
+<h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>最近新开了些windows server 2012 R2的kvm虚机，想着来配置一下wsus。我的WSUS服务器是3.2版本，也就是win 2k8r2上搭建的，客户端配置完成后可以进行更新没有什么问题，但在WSUS 3.2控制台上看到的计算机版本却不匹配，本来是windows server 2012 r2却显示的是windows server 2002看着还真不顺眼。一不做二不休，反正新版的windows server 2016已经出来了，何不拿来搭个新的WSUS10.0呢。</p>
+<a id="more"></a>
+<h2 id="URL"><a href="#URL" class="headerlink" title="URL"></a>URL</h2><p><a href="http://www.nyazit.com/configuring-wsus-windows-server/" target="_blank" rel="external">01. Installing &amp; Configuring WSUS in Windows Server 2016</a><br><a href="https://www.myhusl.com/701.html" target="_blank" rel="external">02. Windows Server 2012 R2 WSUS 部署</a> ==盗版，原版在下面，好处就是把原作者的多篇文章集合到一篇文章里面了==<br><a href="http://543925535.blog.51cto.com/all/639838/page/8" target="_blank" rel="external">03. 曾垂鑫的技术专栏</a> ==这个才是原版的，推荐阅读==<br><a href="http://yves2005.pixnet.net/blog/post/40226585" target="_blank" rel="external">04. wuauclt实用工具</a>  </p>
+<h2 id="ENV"><a href="#ENV" class="headerlink" title="ENV"></a>ENV</h2><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>IP</th>
+<th>OS</th>
+<th>Other</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host</td>
+<td>10.0.0.9</td>
+<td>centos6.5</td>
+<td>iptables&amp;selinux disabled</td>
+</tr>
+<tr>
+<td>WSUS KVM Guest</td>
+<td>10.0.0.19x</td>
+<td>windows server 2016</td>
+<td>4C/8G/copy host cpu configuration; add a cdrom for attach the virtio-win driver</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Principle"><a href="#Principle" class="headerlink" title="Principle"></a>Principle</h2><table>
+<thead>
+<tr>
+<th>WSUS服务使用端口</th>
+<th>WSUS版本</th>
+<th>OS版本</th>
+<th>需要的第三方服务</th>
+<th>其它</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> TCP 80(http)/443(https) or 8530(http)/8531(https)</td>
+<td>WSUS 3.2</td>
+<td>win2k8r2sp1</td>
+<td>IIS</td>
+<td>客户端和WSUS服务器之间，上游WSUS服务器与下游WSUS服务器之间默认使用80/443端口</td>
+</tr>
+<tr>
+<td>TCP 80(http)/443(https) or 8530(http)/8531(https)</td>
+<td>WSUS 10.0</td>
+<td>win2k16</td>
+<td>IIS</td>
+<td>客户端和WSUS服务器之间，上游WSUS服务器与下游WSUS服务器之间都默认使用8530/8531端口，上游WSUS服务器与微软更新服务器之间还是使用80/443端口。实际上从WSUS4.0（windows server 2012）开始客户端和WSUS服务器之间就已经默认使用8530/8531端口了。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Setup"><a href="#Setup" class="headerlink" title="Setup"></a>Setup</h2><h3 id="新建windows-server-2016虚机"><a href="#新建windows-server-2016虚机" class="headerlink" title="新建windows server 2016虚机"></a>新建windows server 2016虚机</h3><p>这里的虚机是用virt-manager图形方式建立的，当然你也可以使用virt-install来建立，或者在你的云平台上直接建立也是OK的哈。</p>
+<p>步骤：</p>
+<ul>
+<li>4C/8G/500G（virtio）</li>
+<li>网卡（virtio）</li>
+<li>cdrom1：<a href="ed2k://|file|cn_windows_server_2016_x64_dvd_9718765.iso|6176450560|CF1B73D220F1160DE850D9E1979DBD50|/" target="_blank" rel="external">windows server 2016 iso</a></li>
+<li>cdrom2：<a href="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso" target="_blank" rel="external">virtio-win statle iso</a></li>
+<li>CPU必须copy host cpu configuration（否则会卡在引导界面，centos7.x中可能不需要这样的设置）</li>
+<li>安装过程中virtio硬盘驱动从cdrom2选择</li>
+<li>安装完成进入OS后从cdrom2更新virtio网卡驱动</li>
+<li>激活windows（可能需要先禁用windows defender）</li>
+<li>配置静态ip地址</li>
+<li>取消IPV6支持（可选）</li>
+<li>启用远程桌面</li>
+<li>关闭UAC</li>
+<li>关闭防火墙</li>
+<li>启用桌面通用图标，勾选计算机和网络</li>
+<li>禁止服务器管理器自启动</li>
+<li>关闭IE增强的安全配置（服务器管理器的本地服务器属性中）</li>
+<li>更改计算机名称</li>
+<li>重启服务器</li>
+</ul>
+<h3 id="安装WSUS服务"><a href="#安装WSUS服务" class="headerlink" title="安装WSUS服务"></a>安装WSUS服务</h3><p>步骤：</p>
+<ul>
+<li>打开服务器管理器，添加角色和功能</li>
+<li>选择安装类型，基于角色或基于功能的安装</li>
+<li>选择服务器角色，勾选windows server更新服务</li>
+<li>选择功能，默认，next</li>
+<li>windows server更新服务，默认，next</li>
+<li>选择角色服务，默认勾选“WID Connectivity”和“WSUS服务”</li>
+<li>内容位置选择，选择一个存储windows update包的本地目录（在C盘新建WSUS updates目录，如果你有多个分区，这个目录可以建立在其它分区上，只要空间够大就好）</li>
+<li>IIS，next</li>
+<li>确认安装所选内容，勾选“如果需要，自动重新启动目标服务器”，安装</li>
+<li>安装进度，完成后点击关闭</li>
+<li>服务器管理器，安装提示的WSUS服务部署后配置任务</li>
+<li>完成安装</li>
+</ul>
+<p><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/212926296.png" alt="打开服务器管理器"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213049207.png" alt="选择安装类型"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213208409.png" alt="勾选windows server更新服务"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213300680.png" alt="勾选windows server更新服务"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213336703.png" alt="选择功能，默认，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213423993.png" alt="windows server更新服务，默认，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213501113.png" alt="选择角色服务，默认勾选“WID Connectivity”和“WSUS服务”"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213539048.png" alt="内容位置选择，选择一个存储windows update包的本地目录（新建WSUS updates目录）"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213613500.png" alt="IIS，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213803320.png" alt="确认安装所选内容，勾选“如果需要，自动重新启动目标服务器”，安装"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213838534.png" alt="确认安装所选内容，勾选“如果需要，自动重新启动目标服务器”，安装"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213926526.png" alt="安装进度"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/213953314.png" alt="安装完成"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214034277.png" alt="服务器管理器，安装提示的WSUS服务部署后配置任务"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214130555.png" alt="服务器管理器，安装提示的WSUS服务部署后配置任务">  </p>
+<h3 id="配置WSUS服务"><a href="#配置WSUS服务" class="headerlink" title="配置WSUS服务"></a>配置WSUS服务</h3><p>步骤：</p>
+<ul>
+<li>服务器管理器-&gt;工具-&gt;windows server更新服务</li>
+<li>进入windows server update services向导，next</li>
+<li>不加入“Microsoft更新改善计划”，next</li>
+<li>选择上游服务器，从Microsoft更新中进行同步，next</li>
+<li>指定代理服务器，next（如果你使用的代理服务器，这里需要给出代理服务器的信息）</li>
+<li>连接到上游服务器，开始连接（这里需要等待一段时间），完成后，点击next</li>
+<li>选择语言，默认选择“英语”和“中文（简体）”（当然你可以只选择中文），next</li>
+<li>选择产品，这里选择Office2010，Office2016，Windows10，windows7，windows server 2008 R2，windows server 2012 R2，Windows Server 2016，next</li>
+<li>选择分类，默认选择Upgrades，安全更新程序，定义更新，关键更新程序，next</li>
+<li>配置同步计划，选择自动同步，第一次同步0:00:00，每天同步3次，next</li>
+<li>完成，忽略初始同步（完成后我们在里面同步一样的），next</li>
+<li>完成</li>
+</ul>
+<p><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214327121.png" alt="服务器管理器-&gt;工具-&gt;windows server更新服务"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214353340.png" alt="进入windows server update services向导，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214413385.png" alt="不加入“Microsoft更新改善计划”，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214436669.png" alt="选择上游服务器，从Microsoft更新中进行同步，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214516450.png" alt="指定代理服务器，next（如果你使用的代理服务器，这里需要给出代理服务器的信息）"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214611879.png" alt="连接到上游服务器，开始连接（这里需要等待一段时间），完成后，点击next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214707259.png" alt="连接到上游服务器，开始连接（这里需要等待一段时间），完成后，点击next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214740279.png" alt="选择语言，默认选择“英语”和“中文（简体）”，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214755687.png" alt="选择产品，这里选择Office2010，Office2016，Windows10，windows7，windows server 2008 R2，windows server 2012 R2，Windows Server 2016，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214825304.png" alt="选择分类，默认选择Upgrades，安全更新程序，定义更新，关键更新程序，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214855636.png" alt="配置同步计划，选择自动同步，第一次同步0:00:00，每天同步3次，next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214919627.png" alt="完成，忽略初始同步（完成后我们在里面同步一样的），next"><br><img src="http://obopl9dp8.bkt.clouddn.com/blog/20170215/214955071.png" alt="完成">  </p>
+<h3 id="管理WSUS服务"><a href="#管理WSUS服务" class="headerlink" title="管理WSUS服务"></a>管理WSUS服务</h3><p>步骤：</p>
+<ul>
+<li>同步，因为我们前面没有做初始同步，所以这里我们可以立即同步，需要注意的是，手动同步可能会同步失败，没关系多同步几次或者等待自动同步就好了</li>
+<li>选项，更新文件和语言，重新指定更新文件存储方式和下载哪些语言的更新包，这里正好我们取消英文的更新包，反正日常用的都是简体中文的</li>
+<li>选项，自动审批，勾选默认的自动审批规则，运行规则</li>
+<li>选项，计算机，这里是选择如何为客户端计算机进行分组，我们可以选择使用默认的更新服务控制台方式，或者使用组策略或注册表方式（这种方式建议域环境下使用，需要客户端配合）</li>
+<li>选项，电子邮件通知，无非就是设置接收邮箱，发送邮件服务器之类的，设置完成后注意最好发送测试邮件进行测试</li>
+<li>报告，这里面可以生成各种报告，首次运行的时候会提示你安装<a href="https://www.microsoft.com/zh-CN/download/details.aspx?id=35747" target="_blank" rel="external">Microsoft Report Viewer 2012</a>，在安装Microsoft Report Viewer 2012的时候还会提示你安装Microsoft System CLR Types for SQL Server 2012，而这个包在<a href="https://www.microsoft.com/zh-CN/download/details.aspx?id=35580" target="_blank" rel="external">Microsoft SQL Server 2012 SP1</a>包中，名为CHS\x64\SQLSysClrTypes.msi，都下载完成后依次运行就可以查看和导出报告了</li>
+<li>计算机，所有计算机，右键添加计算机组，这里可以手动添加多个计算机分组</li>
+</ul>
+<h3 id="WSUS客户端设置"><a href="#WSUS客户端设置" class="headerlink" title="WSUS客户端设置"></a>WSUS客户端设置</h3><p>通常来说如果你是域环境，有域控那就方便多了，直接在域控上新建WSUS组策略，然后设置组策略：启用WSUS自动更新；指定更新服务器（注意端口8530）；启用非管理员接收更新；指定客户端在WSUS服务器上的分组等，最后刷新域策略并更新组策略就可以批量完成客户端计算机的WSUS配置了。实际上我这里没有域环境，客户端数量不大但也不少，如果一个个手动设置组策略还是非常原始的，其实我们都知道组策略最终的修改还是体现在我们的注册表中，所以我们提取注册表修改项就好了。需要注意是，因为我们现在有了DNS服务器了，所以指定WSUS服务器的时候最好使用域名。下面我先介绍最简单的在客户端修改组策略来配置WSUS的方法（适用于少量客户端），然后再介绍使用注册表文件导入WSUS配置的方法（适用于较多客户端）。</p>
+<h4 id="客户端修改组策略配置WSUS"><a href="#客户端修改组策略配置WSUS" class="headerlink" title="客户端修改组策略配置WSUS"></a>客户端修改组策略配置WSUS</h4><p>步骤：</p>
+<ul>
+<li>gpedit.msc</li>
+<li>本地计算机策略，计算机配置，管理模板，windows组件，windows update/windows 更新</li>
+<li>配置自动更新，已启用，3-自动下载并通知安装，确定</li>
+<li>指定Intranet Microsoft更新服务位置，已启用，设置检测更新的Intranet更新服务：<a href="http://wsus.yoursite.com:8530，设置Intranet统计服务器：http://wsus.yoursite.com:8530，确定" target="_blank" rel="external">http://wsus.yoursite.com:8530，设置Intranet统计服务器：http://wsus.yoursite.com:8530，确定</a></li>
+<li>自动更新检测频率，已启用，间隔10小时，确定</li>
+<li>允许非管理员接收更新通知，已启用，确定</li>
+<li>允许自动更新立即安装，已启用，确定</li>
+<li>对于有已登录用户的计算机，计划的自动更新安装不执行重新启动，已启用，确定</li>
+<li>重新计划自动更新计划的安装，已启用，启动30分钟后，确定</li>
+<li>允许客户端目标设置，已启用，此计算机的目标组名称（这个要看你wsus服务器计算机组的设置），确定（可选）</li>
+<li>关闭组策略编辑器</li>
+<li>gpupdate /force，使组策略立即生效</li>
+<li>wuauclt /detectnow，立即检查更新</li>
+</ul>
+<h4 id="使用注册表文件简单配置WSUS"><a href="#使用注册表文件简单配置WSUS" class="headerlink" title="使用注册表文件简单配置WSUS"></a>使用注册表文件简单配置WSUS</h4><p>如果我们的客户端计算机不多，我们可以在客户端计算机上使用组策略来配置WSUS，但是一旦客户端计算机数量增加之后再使用本地组策略来设定WSUS显然效率是十分低下的。其实我们可以通过修改注册表的方法来设定WSUS，当然我们不会笨到在每个客户端上使用注册表编辑器来设置WSUS，我们只需要将设置好后的相关注册表项导出到一个reg文件中，再在其它的客户端中双击导入这个reg文件就可以了。根据客户端常用的两种自动更新方式，这里给出了“自动下载并通知安装”和“自动下载并计划安装”的reg文件内容，具体内容如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">#自动下载并通知安装.reg文件内容</span><br><span class="line">Windows Registry Editor Version 5.00</span><br><span class="line"></span><br><span class="line">[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate]</span><br><span class="line">&quot;WUServer&quot;=&quot;http://wsus.yoursite.com:8530&quot;</span><br><span class="line">&quot;WUStatusServer&quot;=&quot;http://wsus.yoursite.com:8530&quot;</span><br><span class="line">&quot;ElevateNonAdmins&quot;=dword:00000001</span><br><span class="line"></span><br><span class="line">[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU]</span><br><span class="line">&quot;NoAutoUpdate&quot;=dword:00000000</span><br><span class="line">&quot;AUOptions&quot;=dword:00000003</span><br><span class="line">&quot;ScheduledInstallDay&quot;=dword:00000000</span><br><span class="line">&quot;ScheduledInstallTime&quot;=dword:00000003</span><br><span class="line">&quot;UseWUServer&quot;=dword:00000001</span><br><span class="line">&quot;DetectionFrequencyEnabled&quot;=dword:00000001</span><br><span class="line">&quot;DetectionFrequency&quot;=dword:0000000a</span><br><span class="line">&quot;AutoInstallMinorUpdates&quot;=dword:00000001</span><br><span class="line">&quot;NoAutoRebootWithLoggedOnUsers&quot;=dword:00000001</span><br><span class="line">&quot;RescheduleWaitTimeEnabled&quot;=dword:00000001</span><br><span class="line">&quot;RescheduleWaitTime&quot;=dword:0000001e</span><br><span class="line"></span><br><span class="line">[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]</span><br><span class="line">&quot;WSUS Update&quot;=&quot;wuauclt.exe /detectnow&quot;</span><br><span class="line"></span><br><span class="line">#自动下载并计划安装.reg文件内容</span><br><span class="line">Windows Registry Editor Version 5.00</span><br><span class="line"></span><br><span class="line">[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate]</span><br><span class="line">&quot;WUServer&quot;=&quot;http://wsus.yoursite.com:8530&quot;</span><br><span class="line">&quot;WUStatusServer&quot;=&quot;http://wsus.yoursite.com:8530&quot;</span><br><span class="line">&quot;ElevateNonAdmins&quot;=dword:00000001</span><br><span class="line"></span><br><span class="line">[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU]</span><br><span class="line">&quot;NoAutoUpdate&quot;=dword:00000000</span><br><span class="line">&quot;AUOptions&quot;=dword:00000004</span><br><span class="line">&quot;ScheduledInstallDay&quot;=dword:00000000</span><br><span class="line">&quot;ScheduledInstallTime&quot;=dword:00000003</span><br><span class="line">&quot;UseWUServer&quot;=dword:00000001</span><br><span class="line">&quot;DetectionFrequencyEnabled&quot;=dword:00000001</span><br><span class="line">&quot;DetectionFrequency&quot;=dword:0000000a</span><br><span class="line">&quot;AutoInstallMinorUpdates&quot;=dword:00000001</span><br><span class="line">&quot;NoAutoRebootWithLoggedOnUsers&quot;=dword:00000001</span><br><span class="line">&quot;RescheduleWaitTimeEnabled&quot;=dword:00000001</span><br><span class="line">&quot;RescheduleWaitTime&quot;=dword:0000001e</span><br><span class="line"></span><br><span class="line">[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]</span><br><span class="line">&quot;WSUS Update&quot;=&quot;wuauclt.exe /detectnow&quot;</span><br></pre></td></tr></table></figure></p>
+<h3 id="Troubleshooting"><a href="#Troubleshooting" class="headerlink" title="Troubleshooting"></a>Troubleshooting</h3><p>当我们配置了客户端计算机使用WSUS服务器进行自动更新之后，你会发现可能会有各种问题出现：客户端无法检测到更新并报告错误；服务器端无法发现客户端，或者发现的客户端一致处于尚未报告的状态等等。这个时候我们就需要进行排障，下面介绍了两种常用的WSUS排障的方法。</p>
+<h4 id="wuauclt命令"><a href="#wuauclt命令" class="headerlink" title="wuauclt命令"></a>wuauclt命令</h4><p>wuauclt.exe = A Windows Update AutoUpdate Client,Background process which checks with Microsoft website for updates to the operating system.  </p>
+<p>wuauclt.exe命令有几个常用的参数：<br><code>/detectnow</code>：让client立即与WSUS Server进行联系，检查是否有更新<br><code>/reportnow</code>：立即向server报告状态（==此描述不一定准确==），如果你在server上发现客户端总是显示“尚未报告”，可以试一下这个参数<br><code>/resetauthorization</code>：client使用了cookie储存一些信息，如果这些cookie时效过期，那可能就需要使用该参数重新获取，一般配合/detectnow一起使用<br><code>/updatenow</code>：立即更新（==此描述不一定准确==），有人用它来做win10的周年更新  </p>
+<h4 id="WSUS客户端和服务器端日志"><a href="#WSUS客户端和服务器端日志" class="headerlink" title="WSUS客户端和服务器端日志"></a>WSUS客户端和服务器端日志</h4><p>对于排障来说，日志是必备的，client日志文件：C:\Windows\WindowsUpdate.log，服务器端日志文件：C:\Program Files\Update Services\LogFiles\SoftwareDistribution.log。当我们在debug过程中可以随时查看这些文件获取更多详细的输出信息，这更有利于我们更快地排除故障。</p>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>因为我这里没有域环境，加之之前的一些windows kvm guest设置WSUS服务器地址的时候使用的是IP地址而且默认用的80端口，所以如果要将它们更换到新的WSUS服务器会很麻烦，索性先保留旧的WSUS 3.2服务器虚机，让它和新的WSUS 10.0服务器虚机共存。后期新增的windows kvm guest的自动更新将设置到新的WSUS服务器上并且使用域名和8530端口的方式。当然要先在DNS服务器上增加WSUS服务器域名的解析哦。</p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[基于自建IB存储的无盘刀片服务器虚拟化实战]]></title>
       <url>http://blog.leijun.me/2017/01/17/%E5%9F%BA%E4%BA%8E%E8%87%AA%E5%BB%BAIB%E5%AD%98%E5%82%A8%E7%9A%84%E6%97%A0%E7%9B%98%E5%88%80%E7%89%87%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%99%9A%E6%8B%9F%E5%8C%96%E5%AE%9E%E6%88%98/</url>
       <content type="html"><![CDATA[<blockquote>
